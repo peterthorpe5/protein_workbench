@@ -1,0 +1,30 @@
+2026-10-23 13:53:55,236 INFO pocket_workbench.building Building representative sequence alignment and tree
+2026-10-23 13:53:55,253 INFO pocket_workbench.sequences Tree bootstrap 1/5
+2026-10-23 13:53:55,253 INFO pocket_workbench.sequences Tree bootstrap 2/5
+2026-10-23 13:53:55,254 INFO pocket_workbench.sequences Tree bootstrap 3/5
+2026-10-23 13:53:55,254 INFO pocket_workbench.sequences Tree bootstrap 4/5
+2026-10-23 13:53:55,254 INFO pocket_workbench.sequences Tree bootstrap 5/5
+2026-10-23 13:53:55,353 INFO pocket_workbench.sequences Completed sequence analysis msa_97b7e2aa8b143c84535a
+2026-10-23 13:53:55,354 INFO pocket_workbench.building Calculating 3 pairs with usalign (2 workers)
+2026-10-23 13:53:55,354 INFO pocket_workbench.comparison Comparing synthetic_mobile to synthetic_reference
+2026-10-23 13:53:55,355 INFO pocket_workbench.comparison Comparing synthetic_variant to synthetic_reference
+2026-10-23 13:53:55,361 INFO pocket_workbench.comparison Running ['/workspace/scratch/ac856b3127f2/validation_tools/USalign/USalign', 'mobile_fit.pdb', 'reference_fit.pdb', '-m', 'matrix.txt'] in /workspace/scratch/ac856b3127f2/validation_final_demo/comparisons/cmp_a70dde170f24d57889aa
+2026-10-23 13:53:55,361 INFO pocket_workbench.comparison Running ['/workspace/scratch/ac856b3127f2/validation_tools/USalign/USalign', 'mobile_fit.pdb', 'reference_fit.pdb', '-m', 'matrix.txt'] in /workspace/scratch/ac856b3127f2/validation_final_demo/comparisons/cmp_59437b4075112e05f40e
+2026-10-23 13:53:55,380 INFO pocket_workbench.comparison Comparing synthetic_variant to synthetic_mobile
+2026-10-23 13:53:55,383 INFO pocket_workbench.comparison Running ['/workspace/scratch/ac856b3127f2/validation_tools/USalign/USalign', 'mobile_fit.pdb', 'reference_fit.pdb', '-m', 'matrix.txt'] in /workspace/scratch/ac856b3127f2/validation_final_demo/comparisons/cmp_078d537d7a6e597b3ecf
+2026-10-23 13:53:55,392 INFO pocket_workbench.comparison Collected comparison 1/3: complete
+2026-10-23 13:53:55,393 INFO pocket_workbench.comparison Collected comparison 2/3: complete
+2026-10-23 13:53:55,393 INFO pocket_workbench.comparison Collected comparison 3/3: complete
+2026-10-23 13:53:55,473 INFO pocket_workbench.building Calculating 3 pairs with tmalign (2 workers)
+2026-10-23 13:53:55,474 INFO pocket_workbench.comparison Comparing synthetic_mobile to synthetic_reference
+2026-10-23 13:53:55,474 INFO pocket_workbench.comparison Comparing synthetic_variant to synthetic_reference
+2026-10-23 13:53:55,479 INFO pocket_workbench.comparison Running ['/workspace/scratch/ac856b3127f2/validation_tools/USalign/TMalign', 'mobile_fit.pdb', 'reference_fit.pdb', '-m', 'matrix.txt'] in /workspace/scratch/ac856b3127f2/validation_final_demo/comparisons/cmp_b79ef2f229acf3e0c980
+2026-10-23 13:53:55,479 INFO pocket_workbench.comparison Running ['/workspace/scratch/ac856b3127f2/validation_tools/USalign/TMalign', 'mobile_fit.pdb', 'reference_fit.pdb', '-m', 'matrix.txt'] in /workspace/scratch/ac856b3127f2/validation_final_demo/comparisons/cmp_61bba284a1a53966949f
+2026-10-23 13:53:55,493 INFO pocket_workbench.comparison Comparing synthetic_variant to synthetic_mobile
+2026-10-23 13:53:55,495 INFO pocket_workbench.comparison Running ['/workspace/scratch/ac856b3127f2/validation_tools/USalign/TMalign', 'mobile_fit.pdb', 'reference_fit.pdb', '-m', 'matrix.txt'] in /workspace/scratch/ac856b3127f2/validation_final_demo/comparisons/cmp_81d367feebc79c5abc67
+2026-10-23 13:53:55,504 INFO pocket_workbench.comparison Collected comparison 1/3: complete
+2026-10-23 13:53:55,504 INFO pocket_workbench.comparison Collected comparison 2/3: complete
+2026-10-23 13:53:55,504 INFO pocket_workbench.comparison Collected comparison 3/3: complete
+2026-10-23 13:53:55,588 INFO pocket_workbench.reporting Exporting tables and formatted Excel
+2026-10-23 13:53:55,757 INFO pocket_workbench.reporting Packing the reusable app resource
+2026-10-23 13:53:56,504 INFO pocket_workbench.reporting Published offline review: /workspace/scratch/ac856b3127f2/validation_final_review.zip
