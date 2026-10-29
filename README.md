@@ -7,19 +7,20 @@ predictor is needed for viewing.
 
 ## Updating the viewer you already use
 
-**Install this update on your viewing machine. Keep the existing 1.2.0 software
-and environment on Dundee while the quality rerun is running or being resumed.**
-Workflow fingerprints include software identity, so changing that installation
-can prevent an exact resume. Existing native resources from 1.0–1.2 open in
-1.4.0 without rerunning pocket prediction, fitting, alignment or rebuilding DuckDB.
 
-Extract the software ZIP into Downloads, stop the old app with Ctrl-C, then:
+
+Extract the software ZIP into Downloads, unzip then:
 
 ```bash
-cd "$HOME/Downloads/protein_pocket_workbench_1.4.0"
+cd "$HOME/Downloads/protein_workbench"
+
+conda env create --file environment.viewer.yml
 conda activate pocket_workbench
+
+
 python -m pip install --upgrade --editable .
 pocket-workbench --version
+
 ```
 
 The version should be `1.4.0`. Keep this source directory in place because the
@@ -36,7 +37,7 @@ conda activate pocket_workbench
 On the Mac used for viewing:
 
 ```bash
-MADDY_LOCAL="$HOME/Library/CloudStorage/OneDrive-UniversityofDundee/2026_oct_Maddy_BRCA1_pockets"
+MADDY_LOCAL="PATH_TO_RESULTS"
 pocket-workbench app \
   --resource "$MADDY_LOCAL/results/brca1_workbench_v1_1" \
   --port 8510
