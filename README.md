@@ -1,4 +1,4 @@
-# Protein Pocket Workbench 1.4.0
+# Protein Pocket Workbench 1.5.0
 
 Browse predicted protein pockets, saved structural alignments, pocket-marked
 FASTA alignments and trees. The analysis runs in batch on HPC; colleagues can
@@ -7,23 +7,22 @@ predictor is needed for viewing.
 
 ## Updating the viewer you already use
 
+**Install this update on your viewing machine. Keep the existing 1.2.0 software
+and environment on Dundee while the quality rerun is running or being resumed.**
+Workflow fingerprints include software identity, so changing that installation
+can prevent an exact resume. Open existing native resources in 1.5.0 without
+rerunning pocket prediction, fitting, alignment or rebuilding DuckDB.
 
-
-Extract the software ZIP into Downloads, unzip then:
+Extract the software ZIP into Downloads, stop the old app with Ctrl-C, then:
 
 ```bash
-cd "$HOME/Downloads/protein_workbench"
-
-conda env create --file environment.viewer.yml
+cd "$HOME/Downloads/protein_pocket_workbench_1.5.0"
 conda activate pocket_workbench
-
-
 python -m pip install --upgrade --editable .
 pocket-workbench --version
-
 ```
 
-The version should be `1.4.0`. Keep this source directory in place because the
+The version should be `1.5.0`. Keep this source directory in place because the
 installation is editable. If you do not already have the environment, replace
 the activation step above with these two commands:
 
@@ -37,7 +36,7 @@ conda activate pocket_workbench
 On the Mac used for viewing:
 
 ```bash
-MADDY_LOCAL="PATH_TO_RESULTS"
+MADDY_LOCAL="$HOME/Library/CloudStorage/OneDrive-UniversityofDundee/2026_oct_Maddy_BRCA1_pockets"
 pocket-workbench app \
   --resource "$MADDY_LOCAL/results/brca1_workbench_v1_1" \
   --port 8510
@@ -60,6 +59,69 @@ HTML report or DuckDB file alone does not supply the structures needed for 3D.
 A review ZIP contains a nested `app_resource.zip`; extract that too for the app.
 The app starts in browsing mode, with analysis submission controls hidden.
 
+## New in 1.5.0: linked structure and pockets
+
+Open **Models & pockets**, choose one model and a predictor, then use the
+**Linked structure and pockets** panel. The Nightingale sequence tracks and
+existing 3D model stay in sync. Pick a lining track, click a residue, or enter a
+residue position to focus it in 3D. The viewer distinguishes the pocket's
+native ID from its review rank. **Download offline model pocket page** shares
+this model, its tracks and 3D evidence as one HTML file.
+
+For Maddy's pocket 33, use the **intact** dog model
+`fold_np_001013434_03112026_model_0` from the run that includes the dog. Choose
+**fpocket**, type **33** in the track filter and click **Pocket 33**. Select
+**ESQDR copy 2** to highlight the motif or enter **1766** to see its arginine.
+Pocket numbers are specific to a model and method. The cropped region run has
+its own pockets and numbering. See the [linked viewer guide](docs/LINKED_SEQUENCE.md).
+
+Violet domains, magenta motifs and distinct pocket colours keep the selected
+features visible together. Colour pickers are in **Pocket appearance** and
+**Domain and motif colours**. In **Compare structures**, use **Prepare this 3D
+comparison for external viewers** to export the saved aligned pair and selected
+atomic pocket linings for Protein Imager, Mol* and the other hand-offs.
+
+## New in 1.4.0
+
+**Pocket conservation** separates position, fold and lining-conservation rules,
+explains threshold failures and shows pocket distances beside RMSD, aligned
+length, both TM-scores and both input coverages. Original ranks, alternative
+pairs and unassessed evidence remain distinct. Numeric TSV/Excel downloads and
+exact-pair 3D navigation are included. See
+[POCKET_CONSERVATION.md](docs/POCKET_CONSERVATION.md).
+
+**External links** prepares E3-style hand-offs to Protein Imager, Mol*, AlphaFold
+Database, EMERALD and the Multi-Model Inspector. It uses exact local structures,
+pocket residue TSVs and explicitly scoped FASTA, with populated URLs when a
+supported UniProt accession is supplied. A model ZIP can reuse a saved alignment;
+its files and coordinate frame are audited. See
+[EXTERNAL_TOOLS.md](docs/EXTERNAL_TOOLS.md).
+
+Both features are included in newly exported offline reviews, using saved
+results without prediction, fitting or a database rebuild.
+
+## Pocket-viewer improvements retained from 1.3.0
+
+- One selected pocket opens in close-up with muted local protein context,
+  bright lining surfaces, sticks, markers, rank labels and confidence details.
+- Aligned pairs use separate reference/mobile colours. View presets, focus,
+  opacity, background and display filters support closer inspection.
+- Pocket tables start with the original review rank; model labels are shorter.
+  Exact source identifiers remain in search, hover information and downloads.
+- Reference/model/analysis selectors replace long comparison names. The larger
+  directional matrix retains separate fit scopes and missing values.
+- Strict rank-one and best-tested-pocket plots show the corresponding overlap
+  and decision. Counts and plots use the same selected scope.
+- The original full-length resource has an input-confidence summary even without
+  a region-preparation audit. Model groups link directly to their saved 3D fits.
+- Pocket-marked FASTA defaults to one model per sequence/range; all replicates
+  remain selectable. Larger letters, a column ruler, relevant legends and
+  selection-aware counts/downloads improve navigation.
+
+The coloured surface follows **atoms lining the pocket**. It does not represent
+the empty cavity volume. Display filters do not alter predictions or saved fits.
+See [the viewer guide](docs/VIEWER_GUIDE.md) for controls and interpretation.
+
 ## Share the updated offline viewer
 
 The app immediately uses the new viewer when opening an existing native
@@ -69,7 +131,7 @@ were created. To regenerate a finished offline review from saved evidence:
 ```bash
 pocket-workbench review \
   --resource /path/to/finished_resource \
-  --output /path/to/new_review_v1_4
+  --output /path/to/new_review_v1_5
 ```
 
 Choose a new output folder outside the resource. This exports existing evidence;

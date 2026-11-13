@@ -31,10 +31,27 @@ details{font-size:12px;margin-top:10px}summary{cursor:pointer;font-weight:600}de
 [hidden]{display:none!important}.legend{font-size:12px;line-height:1.7}
 .layout:fullscreen{background:#f2f6fa;padding:15px}.layout:fullscreen #viewer{height:calc(100vh - 92px)}.layout:fullscreen aside{height:calc(100vh - 30px)}
 @media(max-width:850px){.layout{grid-template-columns:minmax(0,1fr)}#viewer{height:480px}aside{height:auto;max-height:500px}}
+.sequence-panel{margin:0 12px 10px;padding:11px 12px 10px;border:1px solid #d6e1e9;border-radius:8px;background:white}
+.sequence-panel .help{margin:4px 0 8px}.sequence-panel h2,.sequence-panel h3{margin:0;font-size:14px}
+.sequence-heading,.sequence-controls,.sequence-controls form{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sequence-heading{justify-content:space-between}.sequence-badge,.sequence-window{font-size:11px;color:#385969}
+.sequence-badge,.sequence-selection{background:#edf4f6;border-radius:4px;padding:4px 7px}
+.sequence-controls label{margin:0;font-weight:600}.sequence-controls input{width:86px}.sequence-controls button{font-size:12px}
+.sequence-selection{margin:7px 0 5px;font-size:12px;overflow-wrap:anywhere}
+.sequence-panel nightingale-navigation,.sequence-panel nightingale-sequence,.sequence-panel nightingale-track,.sequence-panel nightingale-linegraph-track{display:block;width:100%;min-width:0;overflow:hidden}
+.sequence-confidence{margin:5px 0 6px}.sequence-panel h3{margin-top:5px}.pocket-track-heading{margin-top:8px}
+.pocket-track-heading input{max-width:190px;border:1px solid #aebfcb;border-radius:5px;padding:5px 8px;font:inherit}
+.sequence-track-row{display:grid;grid-template-columns:minmax(108px,215px) minmax(0,1fr);align-items:center;gap:7px;margin:2px 0}
+.sequence-track-row button{border-left:4px solid var(--feature-colour,#6c47b5);text-align:left;padding:4px 6px;font-size:11px}
+.sequence-track-row button[aria-pressed="true"]{background:#e7f3f4;border-top-color:#77abb1;border-bottom-color:#77abb1}
+.sequence-pocket-rows{max-height:155px;overflow:auto;scrollbar-gutter:stable;padding-right:4px}
+.linked-layout{padding-top:4px}.linked-layout #viewer{height:510px}
+@media(max-width:640px){.sequence-track-row{grid-template-columns:minmax(94px,144px) minmax(0,1fr)}.linked-layout #viewer{height:390px}}
 </style></head><body>
 <header><h1 id="title">Protein pocket explorer</h1><div class="sub">Choose a pocket, inspect its lining and compare its position in the saved coordinate frame.</div></header>
 <div id="selection-summary" class="summary" aria-live="polite"></div>
 <div id="display-warning" role="status" hidden></div>
+<section id="linked-sequence" class="sequence-panel" aria-label="Linked sequence and pocket tracks" hidden></section>
 <div class="layout" id="explorer"><section class="stage">
 <div id="viewer" aria-label="Interactive molecular structure"></div>
 <div class="toolbar">
@@ -58,6 +75,7 @@ details{font-size:12px;margin-top:10px}summary{cursor:pointer;font-weight:600}de
 <label for="opacity">Lining surface opacity <output id="opacity-value">0.75</output></label>
 <input id="opacity" type="range" min="0.15" max="0.95" step="0.05" value="0.75">
 <label for="colour-by">Pocket colours identify</label><select id="colour-by"><option value="rank">Original rank</option><option value="model">Reference or mobile model</option></select>
+<div id="colour-controls" class="row" hidden></div>
 <p class="help">The surface covers atoms lining the predicted site. It is not a calculated empty cavity volume.</p>
 </details>
 <div id="model-controls"></div>
@@ -87,7 +105,9 @@ models.forEach((model,index)=>{
 });
 const palette=['#D55E00','#0072B2','#009E73','#9B3C86','#A36F00','#CC4778','#386A20','#5947B1'];
 const modelColours=['#0072B2','#D55E00'];
-let viewer,spinning=false,focused=[],pickedLabel=null,renderToken=0;
+const landmarkDefaults={domain:'#6332ac',motif:'#a92370'};
+let landmarkColours={...landmarkDefaults};
+let viewer,spinning=false,focused=[],pickedLabel=null,pickedResidue=null,activeFeature=null,linked=null,renderToken=0;
 const state=[];
 function node(tag,text,attrs={}){
   const n=document.createElement(tag);
@@ -101,7 +121,12 @@ function number(value){return value===null||value===undefined||typeof value==='b
 function rank(p){for(const key of ['review_rank','rank']){const value=number(p[key]);if(value!==null&&Number.isInteger(value)&&value>0)return value;}return null;}
 function keyNumber(key){return Number(String(key).substring(String(key).lastIndexOf('_')+1));}
 function rankText(p){const r=number(p.review_rank),review=r!==null&&r>0&&Number.isInteger(r);return rank(p)===null?'Rank unreported':(review?'Review rank ':'Method rank ')+rank(p);}
-function colour(p,i){return el('colour-by').value==='model'?modelColours[i%modelColours.length]:rank(p)===null?'#596E80':palette[(rank(p)-1)%palette.length];}
+function colour(p,i){
+  const mode=el('colour-by').value;
+  if(mode==='custom')return state[i]?.colourInput.value||modelColours[i];
+  if(mode==='model')return modelColours[i%modelColours.length];
+  return rank(p)===null?'#596E80':palette[(rank(p)-1)%palette.length];
+}
 function confidence(p){return p.confidence_status==='meets_local_confidence_rule'?'Locally confident':p.confidence_status==='low_local_confidence'?'Low local confidence':'Local confidence unassessed';}
 function methodName(name){return {fpocket:'fpocket cavities',p2rank:'Independent P2Rank sites',p2rank_rescore:'P2Rank cavity rescoring'}[name]||name;}
 function sortedPockets(st){return (st.model.pockets||[]).filter(p=>p.method===st.method.value).sort((a,b)=>(rank(a)??Infinity)-(rank(b)??Infinity)||Number(a.pocket_id)-Number(b.pocket_id));}
@@ -149,7 +174,11 @@ function control(i,model){
   const count=node('div','',{class:'count'});
   card.append(details,count);el('model-controls').append(card);
   const ca=viewer.getModel(i).selectedAtoms({atom:'CA'}),atoms=new Map(ca.map(a=>[a.resi,a]));
-  const st={model,check,method,choice,confident,threshold,thresholdLabel,start,end,count,atoms,visible:[],selected:[],lining:[]};
+  const colourLabel=node('label',models.length===1?'Pocket colour':i===0?'Reference pocket colour':'Compared pocket colour');
+  const colourInput=node('input',undefined,{type:'color',value:models.length===1?palette[0]:modelColours[i]});
+  colourLabel.append(colourInput);el('colour-controls').append(colourLabel);
+  colourInput.onchange=()=>apply(false);
+  const st={model,check,method,choice,confident,threshold,thresholdLabel,start,end,count,atoms,colourInput,visible:[],selected:[],lining:[]};
   state.push(st);choices(st,true);
   method.onchange=()=>{st.choice.value='';choices(st);apply(true);};
   choice.onchange=()=>apply(true);
@@ -192,7 +221,37 @@ function selectionCard(st,p,i){
   if(flags.length)card.append(node('div',flags.join(' · '),{class:'badge low'}));
   el('selection-summary').append(card);
 }
-function apply(reframe=false){
+function paintLandmark(){
+  if(!activeFeature?.toolPositions.length||!state[0]?.check.checked)return;
+  const resi=activeFeature.toolPositions,col=landmarkColours[activeFeature.kind];
+  viewer.addStyle({model:0,resi},{cartoon:{color:col,style:'trace',thickness:.5,opacity:.95}});
+  if(activeFeature.kind==='motif')viewer.addStyle({model:0,resi},{stick:{radius:.25,color:col}});
+}
+function paintPicked({centre=false}={}){
+  if(pickedLabel){viewer.removeLabel(pickedLabel);pickedLabel=null;}
+  if(!pickedResidue)return;
+  const {index,number:residue}=pickedResidue, st=state[index], atom=st.atoms.get(residue);
+  if(!atom||!st.check.checked)return;
+  viewer.addStyle({model:index,resi:residue},{stick:{radius:.31,color:'#00796e'}});
+  viewer.addStyle({model:index,resi:residue,atom:'CA'},{sphere:{radius:1.12,color:'#00796e'}});
+  pickedLabel=viewer.addLabel(pickedResidue.label,{position:atom,backgroundColor:'#00635b',fontSize:12,inFront:true});
+  if(centre){viewer.zoomTo({model:index,resi:[...st.atoms].filter(([,a])=>
+    (a.x-atom.x)**2+(a.y-atom.y)**2+(a.z-atom.z)**2<=81).map(([n])=>n)});viewer.zoom(.85);}
+}
+function pickModelResidue(index,residue,{centre=false,fromSequence=false}={}){
+  const st=state[index],a=st?.atoms.get(residue);
+  if(!a||!st.check.checked)return;
+  const r=st.model.residues.find(row=>(row.tool_residue_number||keyNumber(row.residue_key))===residue);
+  const original=r?.author_residue_number!==undefined?(r.author_chain||a.chain)+':'+r.author_residue_number+(r.insertion_code||''):'unavailable';
+  const fasta=(st.model.linked_axis?.field==='sequence_position'||!linked)?r?.sequence_position:null;
+  el('picked').textContent=st.model.label+'\n'+a.resn+' · tool '+a.chain+'_'+a.resi+'\nOriginal residue: '+original+(fasta?'\nFASTA position: '+fasta:'')+(r?.plddt!==null&&r?.plddt!==undefined?'\npLDDT: '+Number(r.plddt).toFixed(1):'');
+  pickedResidue={index,number:residue,label:r?.amino_acid&&st.model.linked_axis?
+    r.amino_acid+r[st.model.linked_axis.field]:a.resn+' '+a.chain+'_'+a.resi};
+  if(!fromSequence&&index===0)linked?.showModelResidue(r?.residue_key);
+  if(centre)el('view-mode').value='detail';
+  apply(false,{centre});
+}
+function apply(reframe=false,{centre=false}={}){
   if(!viewer)return;
   const token=++renderToken,warnings=[];
   viewer.removeAllSurfaces();viewer.removeAllLabels();viewer.setStyle({},{});
@@ -201,14 +260,19 @@ function apply(reframe=false){
   el('opacity-value').textContent=Number(el('opacity').value).toFixed(2);
   el('protein-opacity-value').textContent=Number(el('protein-opacity').value).toFixed(2);
   el('quality-legend').hidden=!el('quality').checked;
+  el('colour-controls').hidden=el('colour-by').value!=='custom';
   state.forEach((st,i)=>{
     st.selected=st.check.checked?chosen(st):[];
     st.lining=[...new Set(st.selected.flatMap(p=>(p.residues||[]).map(keyNumber)))].filter(n=>st.atoms.has(n));
-    st.visible=st.check.checked?contextResidues(st,st.lining):[];
+    const contextSeeds=[...st.lining];
+    if(i===0&&activeFeature)contextSeeds.push(...activeFeature.toolPositions);
+    if(pickedResidue?.index===i)contextSeeds.push(pickedResidue.number);
+    st.visible=st.check.checked?contextResidues(st,contextSeeds):[];
     const cartoon={color:el('background').value==='#071722'?'#9DAEBB':'#8798A8',opacity:Number(el('protein-opacity').value)};
     if(el('representation').value==='trace'){cartoon.style='trace';cartoon.thickness=.22;}
     if(el('quality').checked&&st.model.confidence!=='none'){delete cartoon.color;cartoon.colorfunc=colourQuality;}
     if(st.visible.length)viewer.addStyle({model:i,resi:st.visible},{cartoon});
+    if(i===0)paintLandmark();
     st.selected.forEach((p,j)=>{
       const nums=[...new Set((p.residues||[]).map(keyNumber))].filter(n=>st.atoms.has(n)),col=colour(p,i),sel={model:i,resi:nums};
       if(nums.length){
@@ -233,11 +297,14 @@ function apply(reframe=false){
     if(st.check.checked&&!st.selected.length&&st.choice.value!=='none')warnings.push('No pockets match this selection. Check the pocket confidence filter.');
     if(models.length>1&&st.selected.length&&st.model.initial_pocket!==null&&st.model.initial_pocket!==undefined&&(st.selected.length!==1||String(st.selected[0].pocket_id)!==String(st.model.initial_pocket)||st.method.value!==(st.model.initial_method||'fpocket')))warnings.push('The displayed pocket selection differs from the saved pair. Metrics outside this viewer still describe the saved pair.');
   });
+  paintPicked({centre});
+  if(linked){const st=state[0];linked.syncPockets(eligible(st),st.selected,
+    p=>'Pocket '+p.pocket_id+' · '+rankText(p),p=>colour(p,0));}
   if(!el('selection-summary').childElementCount)el('selection-summary').append(node('div','No pocket is selected. Choose a pocket in the controls; available protein context is shown.',{class:'selection-card'}));
   el('display-warning').hidden=!warnings.length;el('display-warning').textContent=[...new Set(warnings)].join(' ');
   el('status').textContent=models.map(m=>m.short_label||m.label).join(' · ')+' · '+(el('view-mode').value==='whole'?'Whole visible context':'Pocket-focused display')+' · rendering shows lining residues, not empty cavity volume.';
   viewer.render();
-  window.pocketDisplayState=state.map(s=>({visible:s.visible.length,pockets:s.selected.map(p=>p.pocket_id),ranks:s.selected.map(rank),lining:s.lining.length,context:[...s.visible],colours:s.selected.map(p=>colour(p,state.indexOf(s)))}));
+  window.pocketDisplayState=state.map((s,i)=>({visible:s.visible.length,pockets:s.selected.map(p=>p.pocket_id),ranks:s.selected.map(rank),lining:s.lining.length,context:[...s.visible],colours:s.selected.map(p=>colour(p,i)),picked:pickedResidue?.index===i?pickedResidue.number:null,landmark:i===0?(activeFeature?.label??null):null}));
   if(reframe){if(el('view-mode').value==='whole')whole();else focus();}
 }
 function focus(){if(focused.length){viewer.zoomTo({or:focused});viewer.zoom(.8);}else whole();viewer.render();}
@@ -249,6 +316,7 @@ function whole(){
 try{
   if(typeof $3Dmol.setSyncSurface==='function')$3Dmol.setSyncSurface(true);
   viewer=$3Dmol.createViewer(el('viewer'),{backgroundColor:'#f8fafc',antialias:true});
+  options(el('colour-by'),[['custom','Choose pocket colours']]);
   if(models.length>1)el('colour-by').value='model';
   models.forEach((m,i)=>{
     viewer.addModel(m.pdb,'pdb');
@@ -256,13 +324,43 @@ try{
     if(!m.pockets?.length&&m.initial_residues?.length)m.pockets=[{pocket_id:m.initial_pocket??'selected',method:'fpocket',residues:m.initial_residues}];
     control(i,m);
   });
-  viewer.setClickable({},true,a=>{
-    const m=models[a.model],r=(m.residues||[]).find(r=>(r.tool_residue_number||keyNumber(r.residue_key))===a.resi);
-    const original=r?.author_residue_number!==undefined?(r.author_chain||a.chain)+':'+r.author_residue_number+(r.insertion_code||''):'unavailable';
-    el('picked').textContent=m.label+'\n'+a.resn+' · tool '+a.chain+'_'+a.resi+'\nOriginal residue: '+original+(r?.sequence_position?'\nFASTA position: '+r.sequence_position:'')+(r?.plddt!==null&&r?.plddt!==undefined?'\npLDDT: '+Number(r.plddt).toFixed(1):'');
-    if(pickedLabel)viewer.removeLabel(pickedLabel);
-    pickedLabel=viewer.addLabel(a.resn+' '+a.chain+'_'+a.resi,{position:a,backgroundColor:'#17384d',fontSize:12,inFront:true});viewer.render();
-  });
+  viewer.setClickable({},true,a=>pickModelResidue(a.model,a.resi));
+  if(models.length===1&&typeof window.mountPocketWorkbenchSequence==='function'){
+    const st=state[0];
+    linked=window.mountPocketWorkbenchSequence({root:el('linked-sequence'),model:st.model,atoms:st.atoms,
+      onPocket:id=>{st.check.checked=true;st.choice.value='p:'+id;el('view-mode').value='detail';apply(true);},
+      onResidue:residue=>{
+        if(residue===null){pickedResidue=null;el('picked').textContent='No coordinates for this position.';apply(false);return;}
+        st.check.checked=true;pickModelResidue(0,residue,{centre:true,fromSequence:true});
+      },
+      onFeature:feature=>{
+        activeFeature=feature;st.check.checked=true;apply(false);
+        if(feature?.toolPositions.length){viewer.zoomTo({model:0,resi:feature.toolPositions});viewer.zoom(.8);viewer.render();}
+      },
+      onClear:()=>{pickedResidue=null;activeFeature=null;el('picked').textContent='Click a lining residue or a Cα marker.';apply(false);},
+    });
+    if(linked){
+      el('explorer').classList.add('linked-layout');
+      if(st.model.linked_axis.features.length){
+        const panel=node('details',undefined,{class:'card'});
+        panel.append(node('summary','Domain and motif colours'));
+        const inputs={};
+        for(const [kind,value] of Object.entries(landmarkDefaults)){
+          const label=node('label',kind==='domain'?'Domain colour':'Motif colour');
+          const input=node('input',undefined,{type:'color',value});
+          inputs[kind]=input;label.append(input);panel.append(label);
+          input.onchange=()=>{landmarkColours[kind]=input.value;linked.setLandmarkColours(landmarkColours);apply(false);};
+        }
+        const reset=node('button','Reset domain and motif colours',{type:'button'});
+        reset.onclick=()=>{
+          landmarkColours={...landmarkDefaults};
+          for(const [kind,value] of Object.entries(landmarkDefaults))inputs[kind].value=value;
+          linked.setLandmarkColours(landmarkColours);apply(false);
+        };
+        panel.append(reset);el('model-controls').after(panel);
+      }
+    }
+  }
   el('title').textContent=models.length===1?'Model and predicted pockets':'Aligned structures and pocket positions';
   ['quality','pockets','markers','surface','labels','representation','opacity','protein-opacity','background','colour-by','context-radius'].forEach(id=>el(id).addEventListener('change',()=>apply(false)));
   el('view-mode').onchange=()=>apply(true);
@@ -275,5 +373,6 @@ try{
   new ResizeObserver(()=>{viewer.resize();viewer.render();}).observe(el('viewer'));
   window.pocketViewer=viewer;
   apply(true);
+  linked?.focusInitialPocket();
 }catch(error){el('status').textContent='The 3D viewer could not start: '+error.message+'. Enable WebGL or download the prepared PDB files.';}
 </script></body></html>

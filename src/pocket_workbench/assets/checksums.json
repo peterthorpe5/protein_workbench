@@ -5,9 +5,12 @@
   "alignment.css": "88a2589f32f5180a17350589dc27f6e79aeaf29d7e4b830de3f6299e3a3a726e",
   "alignment.js": "d306f9228c6fdb35695b8f7d94b59a889ae3f4b6c04101391dccc8188351587a",
   "app.css": "110f0d2186daf54a2edb4ebd188c5ea1f07af1def4fdd4d60753c034cbfd07f5",
-  "jbrowse.js": "42ef1a010059948eab8bbce131c808bce95abf7910b61540f469ca7578302703",
-  "pocket_alignment.html": "76f96bfa41b12f6cfe8f6099c7c726fc731b41bf7c65e6d78b4bbf1db613650f",
-  "structure_template.html": "354f467971e88c9a99b286a730eaeaa598802d0562f914cef8d5ba2c76f639bd",
+  "conservation_review.html": "a29fcff2933ddd30918948deaca0e39a659b8dcec5118931c495ec84a584dd33",
   "external_links.html": "827e056c938f670edad540f1be5ac7108cb058eadd8e39570eaba6ea70ad3fae",
-  "conservation_review.html": "a29fcff2933ddd30918948deaca0e39a659b8dcec5118931c495ec84a584dd33"
+  "jbrowse.js": "42ef1a010059948eab8bbce131c808bce95abf7910b61540f469ca7578302703",
+  "linked_sequence.js": "75ac50256f440b65b2be9db13f6743fcab025177ae9a858147b7d2a9eaf5d9b8",
+  "nightingale-NOTICES.txt": "7aaa0548cf29ab91de55b045da23dd033caf7156c22d18675fedc8804b99e55f",
+  "nightingale-components.js": "27e6a048524dcf7d706c5210dcd2c08ca71a3b53f52c3fc72eb69e0e294c6b6f",
+  "pocket_alignment.html": "76f96bfa41b12f6cfe8f6099c7c726fc731b41bf7c65e6d78b4bbf1db613650f",
+  "structure_template.html": "354f467971e88c9a99b286a730eaeaa598802d0562f914cef8d5ba2c76f639bd"
 }

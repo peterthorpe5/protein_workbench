@@ -177,3 +177,20 @@ def test_context_links_preserve_current_selection_and_never_write_native_evidenc
         for p in project.rglob("*")
         if p.is_file()
     }
+
+
+def test_current_comparison_handoff_invalidates_on_pocket_change(external_app):
+    """The inline export preserves its pair and clears after selecting another."""
+    app = external_app
+    app.sidebar.radio[0].set_value("Compare structures").run()
+    app.button(key="prepare_comparison_viewers").click().run()
+    key = "comparison_viewer_handoff"
+    with zipfile.ZipFile(io.BytesIO(app.session_state[key]["payload"])) as archive:
+        handoff = json.loads(archive.read("handoff.json"))
+        assert handoff["coordinate_frame"] == "saved_alignment"
+        assert "protein_imager/files.tsv" in archive.namelist()
+    selector = app.selectbox(key="comparison_pocket_pair")
+    assert len(selector.options) > 1
+    selector.set_value(1).run()
+    assert key not in app.session_state
+    assert not app.exception and not app.error

@@ -29,7 +29,11 @@ from pocket_workbench.core import (
 )
 from pocket_workbench.database import TABLES, pack_project, query_table, workbook_bytes
 from pocket_workbench.evidence import aligner_agreement, comparison_audit
-from pocket_workbench.external_ui import external_jump, external_page
+from pocket_workbench.external_ui import (
+    comparison_handoff,
+    external_jump,
+    external_page,
+)
 from pocket_workbench.groups import AF3_INSPECTOR_URL, inspector_bundle, source_link
 from pocket_workbench.help_content import field_help, glossary_rows, methods_text
 from pocket_workbench.importing import import_project, read_fasta
@@ -544,11 +548,17 @@ def model_page(*, root: Path, data: dict) -> None:
                 "scope/coverage of any structural fit before interpreting its position."
             )
         if model.get("prepared_model"):
-            st.subheader("3D model and predicted pockets")
+            st.subheader("Linked structure and pockets")
+            st.caption(
+                "Use the Nightingale tracks to select a pocket or residue in 3D. "
+                "Search by native pocket ID, such as `33`, or by `rank 3`. "
+                "If a residue has no coordinates, the viewer will say so."
+            )
             metadata = model_viewer_records(
                 root=root,
                 model=model,
                 pockets=pockets,
+                sequences=data["sequences"],
             )
             metadata["initial_method"] = method
             document = structure_document(
@@ -567,7 +577,7 @@ def model_page(*, root: Path, data: dict) -> None:
                 document,
                 height="content",
                 width="stretch",
-                alt="Interactive model, ranked pockets and residue confidence controls",
+                alt="Linked Nightingale tracks and 3D pocket viewer",
             )
             st.download_button(
                 "Download offline model pocket page",
@@ -903,15 +913,17 @@ def comparison_page(*, root: Path, data: dict) -> None:
     choice = st.selectbox(
         "Saved analysis",
         candidates,
-        format_func=lambda i: analysis_label(
-            engine=completed[i].get("engine", "unreported"),
-            settings=fit_by_id.get(completed[i]["comparison_id"], {}).get(
-                "settings", {}
-            ),
-            scope=fit_by_id.get(completed[i]["comparison_id"], {}).get("scope", ""),
-        )
-        + " · "
-        + completed[i]["status"],
+        format_func=lambda i: (
+            analysis_label(
+                engine=completed[i].get("engine", "unreported"),
+                settings=fit_by_id.get(completed[i]["comparison_id"], {}).get(
+                    "settings", {}
+                ),
+                scope=fit_by_id.get(completed[i]["comparison_id"], {}).get("scope", ""),
+            )
+            + " · "
+            + completed[i]["status"]
+        ),
         key="comparison_analysis",
     )
     st.caption(f"Saved orientation: {reference} ← {mobile}")
@@ -1168,21 +1180,7 @@ def comparison_page(*, root: Path, data: dict) -> None:
         json.dumps(result, indent=2),
         file_name=result["comparison_id"] + ".json",
     )
-    with st.expander("Use another structure viewer"):
-        external_jump(
-            key="comparison_external_tools",
-            first="model:" + result["reference"],
-            second="model:" + result["mobile"],
-            comparison=result["comparison_id"],
-        )
-        st.link_button(
-            "Open Mol* for local-file viewing", "https://molstar.org/viewer/"
-        )
-        st.markdown(
-            "Download the prepared reference and aligned mobile PDBs to load them"
-            " together. The built-in 3Dmol viewer uses the local files directly and"
-            " includes no external protein-data requests."
-        )
+    comparison_handoff(root=root, data=data, result=result, match=match)
 
 
 def sequence_page(*, root: Path, data: dict, workspace: Path) -> None:
@@ -1548,7 +1546,7 @@ def evidence_page(*, root: Path, data: dict) -> None:
     )
     st.caption(
         f"This dataset contains {len(rows):,} saved fits across"
-        f" {len({(r['reference'],r['mobile']) for r in rows}):,} model pairs. Counts"
+        f" {len({(r['reference'], r['mobile']) for r in rows}):,} model pairs. Counts"
         " above use the selected scope only. No support under a threshold is not"
         " experimental evidence of no binding."
     )

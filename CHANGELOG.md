@@ -1,3 +1,16 @@
+# 1.5.0 — Linked structure and pockets
+
+- Added offline Nightingale sequence, pocket lining and pLDDT tracks to
+  single-model views and their HTML downloads. Pocket selections and individual
+  residues stay linked to the existing 3Dmol scene.
+- Checked representative coordinates against the model sequence and labelled
+  model-only numbering when a FASTA mapping cannot be verified.
+- Added reviewed BRCT windows and ESQDR motifs for the exact BRCA1 sequences,
+  with configurable pocket, domain and motif colours.
+- Added a direct export of the saved 3D comparison, with the selected atomic
+  pocket linings in the same coordinate frame as the two proteins.
+- Existing resource schema, pocket ranks and prediction evidence are retained.
+
 # 1.4.0 — 28 October 2026
 
 - Added Pocket conservation with separate position, fold and combined lining
@@ -82,3 +95,4 @@
 
 Existing native schema-1.0 resources remain readable. A new batch build
 materialises the expanded DuckDB columns.
+

@@ -1,6 +1,7 @@
 # Reading structures, pockets and evidence
 
-Version 1.4.0 adds focused conservation and external-tool pages while retaining the 1.3.0 pocket-viewer improvements. It uses saved evidence. Predictions, pocket
+Version 1.5.0 adds [linked Nightingale tracks](LINKED_SEQUENCE.md) to single-model
+views and keeps the conservation and external-tool pages. It uses saved evidence. Predictions, pocket
 ranks, coordinates and fitted transforms are unchanged. The same viewer works
 with original full-length resources and finished quality-rerun resources.
 

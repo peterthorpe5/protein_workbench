@@ -1,4 +1,0 @@
-[console_scripts]
-pocket-workbench = pocket_workbench.cli:main
-pocket-workbench-predict = pocket_workbench._pipeline.cli:main
-pocket-workbench-rerun = pocket_workbench.quality_rerun:main

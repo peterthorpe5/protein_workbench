@@ -1,0 +1,14 @@
+{
+  "name": "pocket-workbench-nightingale",
+  "version": "1.5.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "build": "node build.mjs" },
+  "dependencies": {
+    "@nightingale-elements/nightingale-linegraph-track": "5.11.0",
+    "@nightingale-elements/nightingale-navigation": "5.11.0",
+    "@nightingale-elements/nightingale-sequence": "5.11.0",
+    "@nightingale-elements/nightingale-track": "5.11.1"
+  },
+  "devDependencies": { "esbuild": "0.25.12" }
+}

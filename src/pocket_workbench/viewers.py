@@ -11,16 +11,24 @@ from importlib.resources import files
 from pathlib import Path
 
 from .core import WorkbenchError, inside
+from .linked_sequence import linked_sequence_axis
 from .presentation import model_label, model_labels
 
 
-def model_viewer_records(*, root: Path, model: dict, pockets: list[dict]) -> dict:
+def model_viewer_records(
+    *,
+    root: Path,
+    model: dict,
+    pockets: list[dict],
+    sequences: dict[str, str] | None = None,
+) -> dict:
     """Load one model's portable viewer metadata using bounded project paths.
 
     Args:
         root: Open project directory.
         model: Imported model record.
         pockets: Project pocket evidence, including other models if desired.
+        sequences: Imported representative sequences keyed by their exact IDs.
 
     Returns:
         Coordinate-residue map and method-specific pockets for this model.
@@ -36,6 +44,11 @@ def model_viewer_records(*, root: Path, model: dict, pockets: list[dict]) -> dic
         "residues": residues,
         "pockets": [p for p in pockets if p["sample_id"] == model["sample_id"]],
         "confidence": model.get("confidence", "plddt"),
+        "linked_axis": linked_sequence_axis(
+            residues=residues,
+            model=model,
+            representative_sequence=(sequences or {}).get(model.get("sequence_id", "")),
+        ),
     }
 
 
@@ -56,7 +69,7 @@ def json_for_html(*, value: object) -> str:
     )
 
 
-@lru_cache(maxsize=5)
+@lru_cache(maxsize=10)
 def viewer_asset(*, name: str) -> str:
     """Read a bundled third-party asset after verifying its pinned checksum.
 
@@ -180,9 +193,16 @@ def structure_document(
     labels = model_labels(identifiers=[m["label"] for m in payload["models"]])
     for model in payload["models"]:
         model["short_label"] = labels[model["label"]]
-    library = re.sub(
-        r"</script", r"<\\/script", viewer_asset(name="3Dmol-min.js"), flags=re.I
+    linked = not mobile_pdb and bool(
+        payload["models"] and payload["models"][0].get("linked_axis")
     )
+    libraries = [viewer_asset(name="3Dmol-min.js")]
+    if linked:
+        libraries.extend(
+            viewer_asset(name=name)
+            for name in ("nightingale-components.js", "linked_sequence.js")
+        )
+    library = re.sub(r"</script", r"<\\/script", "\n;\n".join(libraries), flags=re.I)
     template = (
         files("pocket_workbench")
         .joinpath("assets", "structure_template.html")

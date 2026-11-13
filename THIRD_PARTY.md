@@ -20,6 +20,11 @@ Viewer assets:
 - Alignment Viewer 2 **2.0.0-beta-2**, React **18.2.0**, and its CSS, reused from
   the E3 app's vendored build.
 - JBrowse MSA / react-msaview **9.8.0**, reused from that same pinned build.
+- Nightingale sequence, navigation and linegraph track **5.11.0** and feature
+  track **5.11.1**. The build is pinned in `frontend/package-lock.json`; bundled
+  licences are in `src/pocket_workbench/assets/nightingale-NOTICES.txt`. The
+  linked interaction follows the E3 app's `frontend/nightingale.js` and uses
+  this workbench's existing 3Dmol molecular viewer.
 - Complete upstream viewer notices are in
   `src/pocket_workbench/assets/THIRD_PARTY_NOTICES.txt`.
 

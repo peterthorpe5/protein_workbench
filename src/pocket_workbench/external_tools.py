@@ -464,7 +464,12 @@ def pocket_tables(*, root: Path, data: dict, model_ids: list[str]) -> dict[str, 
 
 
 def prepare_external_bundle(
-    *, root: Path, data: dict, model_ids: list[str], comparison_id: str | None = None
+    *,
+    root: Path,
+    data: dict,
+    model_ids: list[str],
+    comparison_id: str | None = None,
+    selected_fpocket_ids: dict[str, int] | None = None,
 ) -> bytes:
     """Prepare audited local models, pocket labels and exact input sequences for upload.
 
@@ -473,6 +478,7 @@ def prepare_external_bundle(
         data: Loaded resource.
         model_ids: One to 1,000 distinct existing model IDs.
         comparison_id: Optional complete saved fit for the selected two models.
+        selected_fpocket_ids: Optional exact pocket IDs for atom-level imager files.
 
     Returns:
         Inspector-compatible ZIP with coordinate hashes, pocket TSVs and hand-off audit.
@@ -585,6 +591,17 @@ def prepare_external_bundle(
             engine=comparison["engine"],
             scope=comparison.get("scope"),
         )
+    if selected_fpocket_ids:
+        if len(selected) == 2 and not comparison:
+            raise WorkbenchError("Use a saved fit for a selected two-pocket overlay")
+        from .external_structures import imager_files
+
+        extras.update(
+            imager_files(
+                root=root, data=data, selected=selected, pocket_ids=selected_fpocket_ids
+            )
+        )
+        handoff["selected_fpocket_ids"] = selected_fpocket_ids
     instructions = (
         "EXTERNAL TOOL HAND-OFF\n\nDownload this ZIP; choose and upload files yourself"
         " in the destination viewer.\nNo structures are fetched from public databases"
@@ -609,6 +626,11 @@ def prepare_external_bundle(
         + "\n".join(f"{r['name']}: {r['url']}" for r in RESOURCES)
         + "\n"
     )
+    if selected_fpocket_ids:
+        instructions += (
+            "\nSelected atomic pocket files are under protein_imager/.\n"
+            "Read protein_imager/START_HERE.txt before loading the saved overlay.\n"
+        )
     extras["HANDOFF.txt"] = instructions.encode("utf-8")
     stream = io.BytesIO(inspector_bundle(root=root, models=selected))
     with zipfile.ZipFile(stream, mode="a", compression=zipfile.ZIP_DEFLATED) as archive:

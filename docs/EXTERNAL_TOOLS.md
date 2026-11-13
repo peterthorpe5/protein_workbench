@@ -36,6 +36,26 @@ hand-offs work without UniProt mapping.
 Distinct model replicates can have identical sequences. Their FASTA records
 retain separate IDs/roles. No public pair link is offered for two equal accessions.
 
+## Export the current 3D comparison
+
+In **Compare structures**, select a saved fit and its **Pocket pair to inspect
+in 3D**. Open **Prepare this 3D comparison for external viewers**, click
+**Prepare current comparison files**, then download the ZIP. The preparation
+uses the pair selected above the 3D viewer. Changing the saved fit or pair
+clears the download until it is prepared again.
+
+| Destination | What to load |
+| --- | --- |
+| Protein Imager or Mol* | Extract the ZIP. Load both `protein_imager/*_protein.cif` files together and add the matching `*_fpocket_*.cif` lining files in the same scene. Retain the saved coordinates. For a fit without a selected pocket pair, load the two `workbench_model_*.cif` files. |
+| Multi-Model Inspector | Load the ZIP. `manifest.tsv` identifies the reference and the already aligned mobile. |
+| EMERALD | Load `model_inputs.fasta` when the exact two model-input sequences are available. This is a sequence comparison, independent of the saved 3D fit. |
+| AlphaFold Database | Open a supported canonical accession through **External links and prepared downloads** for its public database record. The public structure can differ from the local model. |
+
+The pocket files contain the mapped lining atoms in the exported protein
+frame. `protein_imager/files.tsv` records coverage and hashes; the selected
+residue TSV includes author and FASTA positions where known. No cavity mesh or
+external styling is supplied. Upload choices stay with the reviewer.
+
 ## Model ZIP and coordinate frame
 
 The model-set selector is independent of the exploratory sequence pair.

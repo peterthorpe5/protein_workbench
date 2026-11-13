@@ -156,7 +156,10 @@ def export_review(*, root: Path, output: Path) -> Path:
                 reference_pdb=pdb,
                 reference_label=identifier,
                 reference_metadata=model_viewer_records(
-                    root=root, model=model, pockets=data["pockets"]
+                    root=root,
+                    model=model,
+                    pockets=data["pockets"],
+                    sequences=data["sequences"],
                 ),
                 summary=(
                     (
@@ -259,8 +262,8 @@ def export_review(*, root: Path, output: Path) -> Path:
             )
             comparison_links.append(
                 f'<li><a href="comparisons/{identifier}/viewer.html">'
-                f'{html.escape(result["reference"])} / {html.escape(result["mobile"])}'
-                f' · {html.escape(result["engine"])} · {html.escape(result["scope"])}'
+                f"{html.escape(result['reference'])} / {html.escape(result['mobile'])}"
+                f" · {html.escape(result['engine'])} · {html.escape(result['scope'])}"
                 "</a> · "
                 f'<a href="comparisons/{identifier}/conservation.html">'
                 "Pocket conservation and alignment quality</a></li>"
@@ -291,7 +294,7 @@ def export_review(*, root: Path, output: Path) -> Path:
             )
             prefix = f"alignments/{analysis['analysis_id']}"
             alignment_links.append(
-                f'<li>{html.escape(analysis["analysis_id"])} · <a'
+                f"<li>{html.escape(analysis['analysis_id'])} · <a"
                 f' href="{prefix}/pocket_alignment.html">Pocket-annotated FASTA</a> ·'
                 f' <a href="{prefix}/alignment_tree.html">Alignment and tree</a> · <a'
                 f' href="{prefix}/pocket_annotations.tsv">Residue audit TSV</a></li>'

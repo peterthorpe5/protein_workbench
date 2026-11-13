@@ -1,10 +1,27 @@
-# Release validation: 1.4.0
+# Release validation
+
+## 1.5.0 · 13 November 2026
+
+- **208 tests passed; 3 optional real-aligner tests skipped.** The run used
+  Python 3.12.14, Streamlit 1.67.0 and Playwright Chromium on Linux.
+- An offline Chromium test verifies real Nightingale pocket and sequence
+  clicks, residue-number entry, reverse selection from the molecular viewer,
+  independent highlights, colour controls and cropped-out residue handling.
+  HTTP is blocked for the standalone viewer tests.
+- The external export test checks each exported pocket atom against the exact
+  saved aligned mobile, verifies hashes, and retains missing lining counts.
+  A Streamlit test verifies stale comparison exports clear on a pocket change.
+- Tests use synthetic prepared structures. The local viewer and ZIP preparation
+  were verified; no models were uploaded to an external website.
+- The JUnit and coverage files in this directory are historical 1.4.0 outputs.
+
+## 1.4.0 · 28 October 2026
 
 Validated on 28 October 2026 with Python 3.12.14, Streamlit 1.66.1,
 Playwright 1.51.0 and Chromium 134 on Linux.
 
 - **202 tests passed; 3 optional real-aligner tests skipped.**
-  The current JUnit and coverage records are `test_results.xml` and `coverage.json`.
+  Its JUnit and coverage records are `test_results.xml` and `coverage.json`.
 - Thirteen real-browser tests initialise the offline structure, pocket-alignment,
   alignment/tree, external-links, conservation and live-app views, with HTTP
   blocked for standalone viewers.

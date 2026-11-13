@@ -63,6 +63,96 @@ def external_jump(
         st.rerun()
 
 
+def comparison_handoff(
+    *, root: Path, data: dict, result: dict, match: dict | None
+) -> None:
+    """Prepare the currently selected saved comparison for external viewers.
+
+    Args:
+        root: Native project directory.
+        data: Project model and pocket evidence.
+        result: Current saved structural alignment.
+        match: Selected saved fpocket pair, or None for a structures-only fit.
+    """
+    comparison = result["comparison_id"]
+    ids = [result["reference"], result["mobile"]]
+    selected = (
+        {
+            identifier: match[f"{role}_pocket"]
+            for identifier, role in zip(ids, ("reference", "mobile"), strict=True)
+        }
+        if match
+        else {}
+    )
+    signature = (
+        selection_signature(
+            root=root, data=data, model_ids=ids, comparison_id=comparison
+        ),
+        tuple(selected.items()),
+    )
+    key = "comparison_viewer_handoff"
+    state = st.session_state.get(key)
+    if state and state["signature"] != signature:
+        st.session_state.pop(key, None)
+    with st.expander("Prepare this 3D comparison for external viewers"):
+        st.caption(
+            "Uses the saved fit and pocket pair selected above the 3D viewer. "
+            "Selections made inside the viewer are for display. Load the exported "
+            "structures together without fitting them again."
+        )
+        if selected:
+            st.write(
+                f"Reference pocket **{selected[ids[0]]}** · "
+                f"compared pocket **{selected[ids[1]]}** (native fpocket IDs)."
+            )
+        if st.button(
+            "Prepare current comparison files", key="prepare_comparison_viewers"
+        ):
+            st.session_state.pop(key, None)
+            try:
+                payload = prepare_external_bundle(
+                    root=root,
+                    data=data,
+                    model_ids=ids,
+                    comparison_id=comparison,
+                    selected_fpocket_ids=selected,
+                )
+                st.session_state[key] = {"signature": signature, "payload": payload}
+            except (WorkbenchError, OSError, ValueError, RuntimeError) as error:
+                LOGGER.warning("Cannot prepare comparison %s: %s", comparison, error)
+                st.error(str(error))
+        prepared = st.session_state.get(key)
+        if prepared:
+            st.download_button(
+                "Download aligned models and pocket files ZIP",
+                prepared["payload"],
+                file_name=f"{comparison}_external.zip",
+                mime="application/zip",
+            )
+            st.caption(
+                "Includes coordinates, pocket tables and model-input FASTA when "
+                "available. Choose which files to upload in the destination viewer."
+            )
+        tools = st.columns(4)
+        for column, (label, url) in zip(
+            tools,
+            (
+                ("Protein Imager", PROTEIN_IMAGER_URL),
+                ("Mol*", MOLSTAR_URL),
+                ("Multi-Model Inspector", AF3_INSPECTOR_URL),
+                ("EMERALD", EMERALD_URL),
+            ),
+            strict=True,
+        ):
+            column.link_button(label, url)
+        external_jump(
+            key="comparison_external_tools",
+            first="model:" + ids[0],
+            second="model:" + ids[1],
+            comparison=comparison,
+        )
+
+
 def record_panel(*, root: Path, data: dict, record: dict, role: str) -> None:
     """Show exact local coordinates, pocket selections and available database links.
 

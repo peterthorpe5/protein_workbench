@@ -1,6 +1,7 @@
 """External hand-offs preserve saved identities, sequences, ranks and transforms."""
 
 import copy
+import csv
 import hashlib
 import io
 import json
@@ -144,7 +145,8 @@ def test_pair_fasta_distinguishes_cropped_inputs_from_full_representatives(proje
     assert "synthetic_mobile" in reverse.splitlines()[0]
     data["sequences"]["FASTA_only"] = "MNPQRSTVWY"
     assert (
-        "MNPQRSTVWY" in pair_fasta(
+        "MNPQRSTVWY"
+        in pair_fasta(
             data=data,
             first=ids["first"],
             second="sequence:FASTA_only",
@@ -291,6 +293,68 @@ def test_saved_alignment_bundle_reuses_exact_transform_and_leaves_project_unchan
     }
 
 
+def test_selected_imager_pockets_keep_exact_aligned_atoms_and_report_missing(project):
+    """Load matched atom subsets in the saved frame, with explicit missing residues."""
+    data = load_project(root=project)
+    comparison = data["comparisons"][0]
+    result = json.loads((project / comparison["result_path"]).read_text())
+    selected = {result["reference"]: 1, result["mobile"]: 2}
+    for pocket in data["pockets"]:
+        if (pocket["sample_id"], pocket["method"], pocket["pocket_id"]) == (
+            result["mobile"],
+            "fpocket",
+            2,
+        ):
+            pocket["residues"].append("A_99999")
+    payload = prepare_external_bundle(
+        root=project,
+        data=data,
+        model_ids=list(selected),
+        comparison_id=comparison["comparison_id"],
+        selected_fpocket_ids=selected,
+    )
+    with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+        handoff = json.loads(archive.read("handoff.json"))
+        assert handoff["selected_fpocket_ids"] == selected
+        audit = list(
+            csv.DictReader(
+                archive.read("protein_imager/files.tsv").decode().splitlines(),
+                delimiter="\t",
+            )
+        )
+        assert [row["pocket_id"] for row in audit] == ["1", "2"]
+        mobile = audit[1]
+        assert mobile["n_exported_lining_residues"] == "8"
+        assert mobile["n_unexported_lining_residues"] == "1"
+        raw = archive.read(mobile["pocket_file"])
+        assert hashlib.sha256(raw).hexdigest() == mobile["pocket_sha256"]
+        subset = gemmi.make_structure_from_block(
+            gemmi.cif.read_string(raw.decode()).sole_block()
+        )
+        full = gemmi.read_structure(str(project / result["mobile_aligned"]))
+        lookup = {
+            (chain.name, residue.seqid.num, atom.name): tuple(atom.pos)
+            for chain in full[0]
+            for residue in chain
+            for atom in residue
+        }
+        assert subset[0].count_atom_sites() == 32
+        for chain in subset[0]:
+            for residue in chain:
+                for atom in residue:
+                    assert tuple(atom.pos) == pytest.approx(
+                        lookup[chain.name, residue.seqid.num, atom.name], abs=1e-6
+                    )
+    with pytest.raises(WorkbenchError, match="absent"):
+        prepare_external_bundle(
+            root=project,
+            data=data,
+            model_ids=list(selected),
+            comparison_id=comparison["comparison_id"],
+            selected_fpocket_ids={result["reference"]: 99999, result["mobile"]: 2},
+        )
+
+
 @pytest.mark.parametrize("ids", [[], ["missing"], ["synthetic_reference"] * 2])
 def test_invalid_bundle_model_selections_fail_before_preparation(project, ids):
     """Empty, duplicate or absent model selections cannot produce a misleading ZIP."""
@@ -333,9 +397,10 @@ def test_bundle_model_hash_verification_rejects_tampered_or_missing_files(projec
         root=project, data=load_project(root=project), model_ids=["synthetic_reference"]
     )
     stream = io.BytesIO()
-    with zipfile.ZipFile(io.BytesIO(bundle)) as original, zipfile.ZipFile(
-        stream, "w"
-    ) as changed:
+    with (
+        zipfile.ZipFile(io.BytesIO(bundle)) as original,
+        zipfile.ZipFile(stream, "w") as changed,
+    ):
         for name in original.namelist():
             changed.writestr(
                 name,
