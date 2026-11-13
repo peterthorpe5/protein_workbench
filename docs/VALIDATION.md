@@ -1,5 +1,19 @@
 # Release validation
 
+## 1.6.0 · 13 November 2026
+
+- **230 tests passed across the full and targeted runs; 3 optional real-aligner
+  tests skipped.** The runtime used Python 3.12, Streamlit 1.67 and Chromium.
+- Browser checks cover repeated and overlapping motifs, separate residue axes
+  in comparisons, hits outside the saved coordinates and PDF export from the
+  standalone and Streamlit viewers. The exported PDF was rendered and inspected.
+- Public record requests were tested with mocked provider responses, including
+  accession and sequence checks. No live records or unpublished structures
+  were transferred in validation.
+- Species and subcluster checks cover saved alignments, replicate counting,
+  conflicting metadata and accession plus sequence validation. UI tests verify
+  that looking up a record leaves the saved project unchanged.
+
 ## 1.5.0 · 13 November 2026
 
 - **208 tests passed; 3 optional real-aligner tests skipped.** The run used

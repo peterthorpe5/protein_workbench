@@ -2,6 +2,8 @@
 
 - [LINKED_SEQUENCE.md](LINKED_SEQUENCE.md): linked Nightingale sequence, residue,
   pocket and landmark selection in the 3D model.
+- [SEQUENCE_REFERENCE_TOOLS.md](SEQUENCE_REFERENCE_TOOLS.md): motif search and
+  snapshots, missing public inputs and species/subcluster charts.
 - [POCKET_CONSERVATION.md](POCKET_CONSERVATION.md): position/conservation rules,
   distances, alignment quality and exact-pair 3D navigation.
 - [EXTERNAL_TOOLS.md](EXTERNAL_TOOLS.md): populated public links and exact local

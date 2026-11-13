@@ -86,14 +86,27 @@ def test_live_browser_navigation_and_glossary(project, tmp_path):
                     sidebar.get_by_text(label, exact=True).click()
                     page.get_by_role("button", name=button, exact=True).first.wait_for()
                     if label == "Models & pockets":
-                        page.frame_locator("iframe").first.locator("#status").wait_for()
+                        frame = page.frame_locator("iframe").first
+                        frame.locator("#status").wait_for()
+                        assert frame.locator("canvas").count()
+                        frame.get_by_label("Amino acid sequence").fill("KLMN")
+                        frame.get_by_role("button", name="Find amino acids").click()
                         assert (
-                            page.frame_locator("iframe").first.locator("canvas").count()
+                            "exact occurrence"
+                            in frame.locator("#motif-result").inner_text()
                         )
+                        with page.expect_download() as capture:
+                            frame.get_by_role("button", name="Download PDF").click()
+                        scene = tmp_path / "streamlit_view.pdf"
+                        capture.value.save_as(scene)
+                        assert b"KLMN" in scene.read_bytes()
                     if label == "Alignment & trees":
                         page.frame_locator("iframe").first.locator(
                             "#overview svg"
                         ).first.wait_for()
+                        page.get_by_role(
+                            "button", name="Download species counts (TSV)"
+                        ).wait_for()
                 sidebar.get_by_text("HOG / model groups", exact=True).click()
                 page.get_by_role(
                     "button", name="Prepare model ZIP for Inspector", exact=True

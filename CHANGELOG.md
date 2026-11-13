@@ -1,3 +1,16 @@
+# 1.6.0 — Search motifs and export the 3D scene
+
+- Search exact amino acid strings in linked and saved comparison viewers.
+  Highlight one occurrence or all, including overlapping hits, independently
+  of pocket and domain selection. Comparison searches can include both models.
+- Download the current 3D view as an offline PDF with its colour legend.
+- Download public AlphaFold DB mmCIFs and NCBI protein FASTA by explicit
+  accession when inputs are missing. Keep their identities and provenance
+  separate from the saved de novo models and pocket evidence.
+- Summarise unique representative sequences by species and show composition
+  by supplied subcluster or an exploratory cut of the saved alignment tree.
+- Existing results and precomputed fits can be reopened without regeneration.
+
 # 1.5.0 — Linked structure and pockets
 
 - Added offline Nightingale sequence, pocket lining and pLDDT tracks to

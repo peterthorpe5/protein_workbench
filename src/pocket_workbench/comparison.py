@@ -611,10 +611,16 @@ def compare_pair(
             reference_label=reference,
             mobile_label=mobile,
             reference_metadata=model_viewer_records(
-                root=root, model=ref_model, pockets=data["pockets"]
+                root=root,
+                model=ref_model,
+                pockets=data["pockets"],
+                sequences=data["sequences"],
             ),
             mobile_metadata=model_viewer_records(
-                root=root, model=mob_model, pockets=data["pockets"]
+                root=root,
+                model=mob_model,
+                pockets=data["pockets"],
+                sequences=data["sequences"],
             ),
             match=fit["pocket_matches"][0] if fit["pocket_matches"] else None,
             summary=(

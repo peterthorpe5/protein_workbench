@@ -39,6 +39,9 @@ Literal tabs separate fields. `sample_id` must match the complete model filename
 stem or imported report ID. An explicit sequence ID must exist in the FASTA.
 An exact full match or unique exact fragment is required. Unmatched/ambiguous
 records stay visible in model checks; no fuzzy mapping is silently accepted.
+Add an optional `species` column to this TSV to use explicit species labels in
+the app. Existing resources can use the two-column species TSV under
+**Species composition** without reimporting.
 
 ## Coordinates
 

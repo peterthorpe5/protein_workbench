@@ -28,6 +28,7 @@ from pocket_workbench.core import (
     safe_id,
 )
 from pocket_workbench.database import TABLES, pack_project, query_table, workbook_bytes
+from pocket_workbench.discovery_ui import composition_panel, public_record_panel
 from pocket_workbench.evidence import aligner_agreement, comparison_audit
 from pocket_workbench.external_ui import (
     comparison_handoff,
@@ -586,6 +587,12 @@ def model_page(*, root: Path, data: dict) -> None:
                 mime="text/html",
             )
             external_jump(key="model_external_tools", first="model:" + selected)
+        if not model.get("prepared_model") or not data["sequences"].get(
+            model.get("sequence_id")
+        ):
+            public_record_panel(
+                key="model_reference", root=root, data=data, model=model
+            )
     st.subheader("Ranked pocket evidence")
     show_table(
         rows=[{key: row.get(key) for key in columns} for row in pockets],
@@ -1139,11 +1146,17 @@ def comparison_page(*, root: Path, data: dict) -> None:
         mobile_label=result["mobile"],
         match=match,
         reference_metadata=model_viewer_records(
-            root=root, model=reference_model, pockets=data["pockets"]
+            root=root,
+            model=reference_model,
+            pockets=data["pockets"],
+            sequences=data["sequences"],
         )
         | ({"initial_display": "none"} if not match else {}),
         mobile_metadata=model_viewer_records(
-            root=root, model=mobile_model, pockets=data["pockets"]
+            root=root,
+            model=mobile_model,
+            pockets=data["pockets"],
+            sequences=data["sequences"],
         )
         | ({"initial_display": "none"} if not match else {}),
         summary=(
@@ -1207,6 +1220,7 @@ def sequence_page(*, root: Path, data: dict, workspace: Path) -> None:
             "Add a representative FASTA or model coordinates through Start / import to"
             " enable sequence analysis."
         )
+        public_record_panel(key="alignment_reference", root=root, data=data)
         return
     if analysis_enabled():
         with st.expander("Configure a new alignment on this server"):
@@ -1295,6 +1309,25 @@ def sequence_page(*, root: Path, data: dict, workspace: Path) -> None:
                 except (ValueError, OSError) as error:
                     st.error(str(error))
     if not data["sequence_analyses"]:
+        composition_panel(
+            data=data, identifiers=list(data["sequences"]), key="representatives"
+        )
+        missing = sorted(
+            set(data["sequences"])
+            - {
+                row.get("sequence_id")
+                for row in data["models"]
+                if row.get("prepared_model")
+            }
+        )
+        lookup_id = (
+            st.selectbox("Representative without a saved structure", missing)
+            if missing
+            else ""
+        )
+        public_record_panel(
+            key="alignment_reference", root=root, data=data, sequence_id=lookup_id
+        )
         return
     analyses = data["sequence_analyses"]
     index = st.selectbox(
@@ -1304,7 +1337,9 @@ def sequence_page(*, root: Path, data: dict, workspace: Path) -> None:
         index=len(analyses) - 1,
     )
     analysis = analyses[index]
-    msa = inside(root=root, relative=analysis["alignment_path"]).read_text()
+    alignment_path = inside(root=root, relative=analysis["alignment_path"])
+    msa = alignment_path.read_text()
+    aligned_records = read_fasta(path=alignment_path, aligned=True)
     tree = (
         inside(root=root, relative=analysis["tree_path"]).read_text()
         if analysis.get("tree_path")
@@ -1314,6 +1349,32 @@ def sequence_page(*, root: Path, data: dict, workspace: Path) -> None:
         f"{analysis['alignment_method']} · {analysis['sequence_count']} records ·"
         f" {analysis['alignment_length']} columns. Tree: {analysis['tree_method']}."
     )
+    composition_panel(
+        data=data,
+        identifiers=list(aligned_records),
+        key="saved_alignment",
+        newick=tree,
+        show_groups=True,
+    )
+    modelled = {
+        row.get("sequence_id") for row in data["models"] if row.get("prepared_model")
+    }
+    missing = [name for name in aligned_records if name not in modelled]
+    if missing:
+        lookup_id = st.selectbox(
+            "Alignment member without a saved structure",
+            missing,
+            key="alignment_missing_model",
+        )
+        public_record_panel(
+            key="alignment_reference",
+            root=root,
+            data=data,
+            sequence_id=lookup_id,
+            sequences={
+                lookup_id: aligned_records[lookup_id].replace("-", "").replace(".", "")
+            },
+        )
     viewer = st.radio(
         "Sequence viewer",
         [
@@ -1327,10 +1388,7 @@ def sequence_page(*, root: Path, data: dict, workspace: Path) -> None:
         payload = pocket_alignment_data(
             root=root,
             data=data,
-            aligned_records=read_fasta(
-                path=inside(root=root, relative=analysis["alignment_path"]),
-                aligned=True,
-            ),
+            aligned_records=aligned_records,
         )
         document = pocket_alignment_document(payload=payload)
         st.download_button(
@@ -1370,9 +1428,6 @@ def sequence_page(*, root: Path, data: dict, workspace: Path) -> None:
         c.download_button(
             "Download Newick tree", tree, file_name=analysis["analysis_id"] + ".newick"
         )
-    aligned_records = read_fasta(
-        path=inside(root=root, relative=analysis["alignment_path"]), aligned=True
-    )
     mapped_models = [
         row
         for row in data["models"]
@@ -1727,6 +1782,27 @@ def group_page(*, root: Path, data: dict) -> None:
         rows=[{k: m.get(k) for k in member_columns} for m in members],
         key="group_members",
     )
+    composition_panel(
+        data=data,
+        identifiers=[m["sequence_id"] for m in members if m.get("sequence_id")],
+        key="model_group",
+        show_groups=True,
+    )
+    missing = [
+        m
+        for m in members
+        if not m.get("prepared_model")
+        or not data["sequences"].get(m.get("sequence_id"))
+    ]
+    if missing:
+        missing_index = st.selectbox(
+            "Group member missing a model or FASTA",
+            range(len(missing)),
+            format_func=lambda i: labels[missing[i]["sample_id"]],
+        )
+        public_record_panel(
+            key="group_reference", root=root, data=data, model=missing[missing_index]
+        )
     names = {m["sample_id"] for m in members}
     comparisons = [
         row

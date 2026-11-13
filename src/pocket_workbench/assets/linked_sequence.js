@@ -41,6 +41,7 @@
     let start = 1, end = length, picked = null, activeFeature = null;
     let pocketOptions = [], selectedIds = [], rowSignature = "";
     let pocketTrackElements = [];
+    let motifTrack = null;
     const primaryTracks = [], featureButtons = [], actions = new WeakMap();
     const span = append(root, "div", undefined, { class: "sequence-heading" });
     append(span, "h2", "Linked structure and pockets · Nightingale");
@@ -216,6 +217,9 @@
       }
     }
 
+    const motifRow = append(root, "div", undefined, { class: "sequence-track-row", hidden: "" });
+    const motifLabel = append(motifRow, "span", "Motif search", { class: "help" });
+
     const heading = append(root, "div", undefined, { class: "sequence-heading pocket-track-heading" });
     append(heading, "h3", "Pocket lining tracks");
     const search = append(heading, "input", undefined, {
@@ -296,6 +300,21 @@
       setLandmarkColours(colours) {
         landmarkColours = colours;
         for (const button of featureButtons) button.updateColour();
+      },
+      showMotif(selection, reframe = false) {
+        motifRow.hidden = !selection;
+        if (!selection) return;
+        if (!motifTrack) motifTrack = makeTrack(motifRow, "track", 23, primaryTracks);
+        motifLabel.textContent = selection.label;
+        const ranges = [];
+        for (const range of selection.spans) {
+          const last = ranges.at(-1);
+          if (last && range.start <= last.end) last.end = Math.max(last.end, range.end);
+          else ranges.push({ ...range });
+        }
+        motifTrack.data = [{ accession: "motif-search", color: selection.colour,
+          locations: [{ fragments: ranges }] }];
+        if (reframe && ranges.length) reveal([ranges[0].start, ranges.at(-1).end]);
       },
     };
   }

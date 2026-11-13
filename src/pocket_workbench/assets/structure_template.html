@@ -47,16 +47,23 @@ details{font-size:12px;margin-top:10px}summary{cursor:pointer;font-weight:600}de
 .sequence-pocket-rows{max-height:155px;overflow:auto;scrollbar-gutter:stable;padding-right:4px}
 .linked-layout{padding-top:4px}.linked-layout #viewer{height:510px}
 @media(max-width:640px){.sequence-track-row{grid-template-columns:minmax(94px,144px) minmax(0,1fr)}.linked-layout #viewer{height:390px}}
+.motif-panel{margin:8px 12px;padding:10px 12px;border:1px solid #d6e1e9;border-radius:8px;background:white}
+.motif-panel h2{margin:0}.motif-form{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:6px 0}
+.motif-form select{width:auto;max-width:100%}.motif-form input[type=text]{font:inherit;max-width:140px;padding:6px;border:1px solid #aebfcb;border-radius:5px}
+.motif-form label{display:flex;gap:5px;align-items:center;margin:0}.motif-form input[type=color]{width:30px;padding:0}
+.motif-result{font-size:12px;margin:5px 0;overflow-wrap:anywhere}
 </style></head><body>
 <header><h1 id="title">Protein pocket explorer</h1><div class="sub">Choose a pocket, inspect its lining and compare its position in the saved coordinate frame.</div></header>
 <div id="selection-summary" class="summary" aria-live="polite"></div>
 <div id="display-warning" role="status" hidden></div>
+<section id="motif-panel" class="motif-panel" aria-labelledby="motif-title" hidden></section>
 <section id="linked-sequence" class="sequence-panel" aria-label="Linked sequence and pocket tracks" hidden></section>
 <div class="layout" id="explorer"><section class="stage">
 <div id="viewer" aria-label="Interactive molecular structure"></div>
 <div class="toolbar">
 <button id="focus" class="primary">Focus pockets</button><button id="reset">Show whole models</button>
 <button id="spin">Rotate</button><button id="fullscreen">Full screen</button><button id="png">Download PNG</button>
+<button id="pdf" type="button">Download PDF</button>
 </div></section>
 <aside aria-label="Structure and pocket controls">
 <div class="card"><h2>View</h2>
@@ -106,8 +113,8 @@ models.forEach((model,index)=>{
 const palette=['#D55E00','#0072B2','#009E73','#9B3C86','#A36F00','#CC4778','#386A20','#5947B1'];
 const modelColours=['#0072B2','#D55E00'];
 const landmarkDefaults={domain:'#6332ac',motif:'#a92370'};
-let landmarkColours={...landmarkDefaults};
-let viewer,spinning=false,focused=[],pickedLabel=null,pickedResidue=null,activeFeature=null,linked=null,renderToken=0;
+let viewer,spinning=false,focused=[],pickedLabel=null,pickedResidue=null,linked=null,renderToken=0,surfaces=[];
+const activeMotifs=new Map();
 const state=[];
 function node(tag,text,attrs={}){
   const n=document.createElement(tag);
@@ -178,7 +185,7 @@ function control(i,model){
   const colourInput=node('input',undefined,{type:'color',value:models.length===1?palette[0]:modelColours[i]});
   colourLabel.append(colourInput);el('colour-controls').append(colourLabel);
   colourInput.onchange=()=>apply(false);
-  const st={model,check,method,choice,confident,threshold,thresholdLabel,start,end,count,atoms,colourInput,visible:[],selected:[],lining:[]};
+  const st={model,check,method,choice,confident,threshold,thresholdLabel,start,end,count,atoms,colourInput,visible:[],selected:[],lining:[],landmark:null,landmarkColours:{...landmarkDefaults}};
   state.push(st);choices(st,true);
   method.onchange=()=>{st.choice.value='';choices(st);apply(true);};
   choice.onchange=()=>apply(true);
@@ -221,11 +228,43 @@ function selectionCard(st,p,i){
   if(flags.length)card.append(node('div',flags.join(' · '),{class:'badge low'}));
   el('selection-summary').append(card);
 }
-function paintLandmark(){
-  if(!activeFeature?.toolPositions.length||!state[0]?.check.checked)return;
-  const resi=activeFeature.toolPositions,col=landmarkColours[activeFeature.kind];
-  viewer.addStyle({model:0,resi},{cartoon:{color:col,style:'trace',thickness:.5,opacity:.95}});
-  if(activeFeature.kind==='motif')viewer.addStyle({model:0,resi},{stick:{radius:.25,color:col}});
+function paintLandmark(st,index){
+  const feature=st.landmark;
+  if(!feature?.toolPositions.length||!st.check.checked)return;
+  const resi=feature.toolPositions,col=st.landmarkColours[feature.kind];
+  viewer.addStyle({model:index,resi},{cartoon:{color:col,style:'trace',thickness:.5,opacity:.95}});
+  if(feature.kind==='motif')viewer.addStyle({model:index,resi},{stick:{radius:.25,color:col}});
+}
+function paintMotif(st,index){
+  const motif=activeMotifs.get(index);
+  if(!motif?.toolPositions.length||!st.check.checked)return;
+  const {toolPositions:resi,colour:color}=motif;
+  viewer.addStyle({model:index,resi,atom:'CA'},{sphere:{radius:.68,color}});
+  viewer.addStyle({model:index,resi},{cross:{radius:.36,color}});
+  // Pocket spheres would cover an overlapping motif sphere; show a coloured halo.
+  if(el('markers').checked||el('surface').checked){
+    const lining=new Set(st.lining);
+    for(const n of resi){
+      if(!lining.has(n))continue;
+      const atom=st.atoms.get(n);
+      viewer.addSphere({center:atom,radius:1.32,color,opacity:.38});
+      if(el('markers').checked){
+        const p=st.selected.find(p=>(p.residues||[]).some(key=>keyNumber(key)===n));
+        if(p)viewer.addStyle({model:index,resi:n,atom:'CA'},{sphere:{radius:.93,color:colour(p,index)}});
+      }
+    }
+  }
+}
+function focusPositions(index,resi){
+  if(!resi.length)return;
+  const selections=[...focused,{model:index,resi}];
+  if(state[index].landmark?.toolPositions.length){
+    selections.push({model:index,resi:state[index].landmark.toolPositions});
+  }
+  for(const motif of activeMotifs.values())if(motif.toolPositions.length&&state[motif.index].check.checked){
+    selections.push({model:motif.index,resi:motif.toolPositions});
+  }
+  viewer.zoomTo({or:selections});viewer.zoom(.78);viewer.render();
 }
 function paintPicked({centre=false}={}){
   if(pickedLabel){viewer.removeLabel(pickedLabel);pickedLabel=null;}
@@ -243,7 +282,7 @@ function pickModelResidue(index,residue,{centre=false,fromSequence=false}={}){
   if(!a||!st.check.checked)return;
   const r=st.model.residues.find(row=>(row.tool_residue_number||keyNumber(row.residue_key))===residue);
   const original=r?.author_residue_number!==undefined?(r.author_chain||a.chain)+':'+r.author_residue_number+(r.insertion_code||''):'unavailable';
-  const fasta=(st.model.linked_axis?.field==='sequence_position'||!linked)?r?.sequence_position:null;
+  const fasta=st.model.linked_axis?.field==='sequence_position'?r?.sequence_position:null;
   el('picked').textContent=st.model.label+'\n'+a.resn+' · tool '+a.chain+'_'+a.resi+'\nOriginal residue: '+original+(fasta?'\nFASTA position: '+fasta:'')+(r?.plddt!==null&&r?.plddt!==undefined?'\npLDDT: '+Number(r.plddt).toFixed(1):'');
   pickedResidue={index,number:residue,label:r?.amino_acid&&st.model.linked_axis?
     r.amino_acid+r[st.model.linked_axis.field]:a.resn+' '+a.chain+'_'+a.resi};
@@ -254,7 +293,8 @@ function pickModelResidue(index,residue,{centre=false,fromSequence=false}={}){
 function apply(reframe=false,{centre=false}={}){
   if(!viewer)return;
   const token=++renderToken,warnings=[];
-  viewer.removeAllSurfaces();viewer.removeAllLabels();viewer.setStyle({},{});
+  surfaces=[];
+  viewer.removeAllSurfaces();viewer.removeAllLabels();viewer.removeAllShapes();viewer.setStyle({},{});
   pickedLabel=null;focused=[];el('selection-summary').replaceChildren();
   viewer.setBackgroundColor(el('background').value);
   el('opacity-value').textContent=Number(el('opacity').value).toFixed(2);
@@ -265,14 +305,15 @@ function apply(reframe=false,{centre=false}={}){
     st.selected=st.check.checked?chosen(st):[];
     st.lining=[...new Set(st.selected.flatMap(p=>(p.residues||[]).map(keyNumber)))].filter(n=>st.atoms.has(n));
     const contextSeeds=[...st.lining];
-    if(i===0&&activeFeature)contextSeeds.push(...activeFeature.toolPositions);
+    if(st.landmark)contextSeeds.push(...st.landmark.toolPositions);
+    for(const n of activeMotifs.get(i)?.toolPositions??[])contextSeeds.push(n);
     if(pickedResidue?.index===i)contextSeeds.push(pickedResidue.number);
     st.visible=st.check.checked?contextResidues(st,contextSeeds):[];
     const cartoon={color:el('background').value==='#071722'?'#9DAEBB':'#8798A8',opacity:Number(el('protein-opacity').value)};
     if(el('representation').value==='trace'){cartoon.style='trace';cartoon.thickness=.22;}
     if(el('quality').checked&&st.model.confidence!=='none'){delete cartoon.color;cartoon.colorfunc=colourQuality;}
     if(st.visible.length)viewer.addStyle({model:i,resi:st.visible},{cartoon});
-    if(i===0)paintLandmark();
+    paintLandmark(st,i);
     st.selected.forEach((p,j)=>{
       const nums=[...new Set((p.residues||[]).map(keyNumber))].filter(n=>st.atoms.has(n)),col=colour(p,i),sel={model:i,resi:nums};
       if(nums.length){
@@ -280,7 +321,7 @@ function apply(reframe=false,{centre=false}={}){
         if(el('markers').checked)viewer.addStyle({...sel,atom:'CA'},{sphere:{radius:.95,color:col}});
         if(el('surface').checked&&j<8){
           const result=viewer.addSurface($3Dmol.SurfaceType.VDW,{opacity:Number(el('opacity').value),color:col},sel);
-          if(result&&typeof result.then==='function')result.then(()=>{if(token===renderToken)viewer.render();}).catch(()=>{el('status').textContent='Surface rendering failed; lining sticks and markers remain available.';});
+          if(result&&typeof result.then==='function')surfaces.push(result.then(()=>{if(token===renderToken)viewer.render();}).catch(()=>{if(token===renderToken)el('status').textContent='Surface rendering failed; lining sticks and markers remain available.';}));
         }
         if(el('labels').checked&&j<8){
           const atoms=nums.map(n=>st.atoms.get(n)),position={x:0,y:0,z:0};
@@ -296,6 +337,7 @@ function apply(reframe=false,{centre=false}={}){
     st.count.textContent='Protein context: '+st.visible.length+'/'+st.model.residues.length+' residues · '+st.selected.length+' selected pockets · '+st.lining.length+' mapped lining residues.';
     if(st.check.checked&&!st.selected.length&&st.choice.value!=='none')warnings.push('No pockets match this selection. Check the pocket confidence filter.');
     if(models.length>1&&st.selected.length&&st.model.initial_pocket!==null&&st.model.initial_pocket!==undefined&&(st.selected.length!==1||String(st.selected[0].pocket_id)!==String(st.model.initial_pocket)||st.method.value!==(st.model.initial_method||'fpocket')))warnings.push('The displayed pocket selection differs from the saved pair. Metrics outside this viewer still describe the saved pair.');
+    paintMotif(st,i);
   });
   paintPicked({centre});
   if(linked){const st=state[0];linked.syncPockets(eligible(st),st.selected,
@@ -304,7 +346,7 @@ function apply(reframe=false,{centre=false}={}){
   el('display-warning').hidden=!warnings.length;el('display-warning').textContent=[...new Set(warnings)].join(' ');
   el('status').textContent=models.map(m=>m.short_label||m.label).join(' · ')+' · '+(el('view-mode').value==='whole'?'Whole visible context':'Pocket-focused display')+' · rendering shows lining residues, not empty cavity volume.';
   viewer.render();
-  window.pocketDisplayState=state.map((s,i)=>({visible:s.visible.length,pockets:s.selected.map(p=>p.pocket_id),ranks:s.selected.map(rank),lining:s.lining.length,context:[...s.visible],colours:s.selected.map(p=>colour(p,i)),picked:pickedResidue?.index===i?pickedResidue.number:null,landmark:i===0?(activeFeature?.label??null):null}));
+  window.pocketDisplayState=state.map((s,i)=>({visible:s.visible.length,pockets:s.selected.map(p=>p.pocket_id),ranks:s.selected.map(rank),lining:s.lining.length,context:[...s.visible],colours:s.selected.map(p=>colour(p,i)),picked:pickedResidue?.index===i?pickedResidue.number:null,landmark:s.landmark?.label??null,motif:activeMotifs.get(i)?.toolPositions??[]}));
   if(reframe){if(el('view-mode').value==='whole')whole();else focus();}
 }
 function focus(){if(focused.length){viewer.zoomTo({or:focused});viewer.zoom(.8);}else whole();viewer.render();}
@@ -334,10 +376,10 @@ try{
         st.check.checked=true;pickModelResidue(0,residue,{centre:true,fromSequence:true});
       },
       onFeature:feature=>{
-        activeFeature=feature;st.check.checked=true;apply(false);
-        if(feature?.toolPositions.length){viewer.zoomTo({model:0,resi:feature.toolPositions});viewer.zoom(.8);viewer.render();}
+        st.landmark=feature;st.check.checked=true;apply(false);
+        if(feature)focusPositions(0,feature.toolPositions);
       },
-      onClear:()=>{pickedResidue=null;activeFeature=null;el('picked').textContent='Click a lining residue or a Cα marker.';apply(false);},
+      onClear:()=>{pickedResidue=null;st.landmark=null;el('picked').textContent='Click a lining residue or a Cα marker.';apply(false);},
     });
     if(linked){
       el('explorer').classList.add('linked-layout');
@@ -349,18 +391,32 @@ try{
           const label=node('label',kind==='domain'?'Domain colour':'Motif colour');
           const input=node('input',undefined,{type:'color',value});
           inputs[kind]=input;label.append(input);panel.append(label);
-          input.onchange=()=>{landmarkColours[kind]=input.value;linked.setLandmarkColours(landmarkColours);apply(false);};
+          input.onchange=()=>{st.landmarkColours[kind]=input.value;linked.setLandmarkColours(st.landmarkColours);apply(false);};
         }
         const reset=node('button','Reset domain and motif colours',{type:'button'});
         reset.onclick=()=>{
-          landmarkColours={...landmarkDefaults};
+          st.landmarkColours={...landmarkDefaults};
           for(const [kind,value] of Object.entries(landmarkDefaults))inputs[kind].value=value;
-          linked.setLandmarkColours(landmarkColours);apply(false);
+          linked.setLandmarkColours(st.landmarkColours);apply(false);
         };
         panel.append(reset);el('model-controls').after(panel);
       }
     }
   }
+  window.pocketStructureFeatures.mount({root:el('motif-panel'),models,states:state,
+    onMotifs:(selections,reframe)=>{
+      activeMotifs.clear();
+      for(const item of selections){activeMotifs.set(item.index,item);state[item.index].check.checked=true;}
+      linked?.showMotif(activeMotifs.get(0),reframe);apply(false);
+      const first=selections.find(item=>item.toolPositions.length);
+      if(first&&reframe)focusPositions(first.index,first.toolPositions);
+    },
+    onLandmark:(i,feature)=>{
+      state[i].landmark=feature;state[i].check.checked=true;apply(false);
+      if(feature)focusPositions(i,feature.toolPositions);
+    },
+    onLandmarkColour:(i,kind,value)=>{state[i].landmarkColours[kind]=value;apply(false);},
+  });
   el('title').textContent=models.length===1?'Model and predicted pockets':'Aligned structures and pocket positions';
   ['quality','pockets','markers','surface','labels','representation','opacity','protein-opacity','background','colour-by','context-radius'].forEach(id=>el(id).addEventListener('change',()=>apply(false)));
   el('view-mode').onchange=()=>apply(true);
@@ -370,6 +426,28 @@ try{
   el('fullscreen').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen();else el('explorer').requestFullscreen().catch(()=>{el('status').textContent='Full screen is unavailable here. Download and open the offline page to use it.';});};
   document.addEventListener('fullscreenchange',()=>setTimeout(()=>{viewer.resize();viewer.render();},100));
   el('png').onclick=()=>{const a=node('a');a.href=viewer.pngURI();a.download='protein_pockets.png';a.click();};
+  el('pdf').onclick=async()=>{
+    el('pdf').disabled=true;
+    try{
+      const pending=surfaces;
+      await Promise.all(pending);
+      const legend=[];
+      state.forEach((st,i)=>{
+        if(!st.check.checked)return;
+        for(const p of st.selected)legend.push({text:`${st.model.short_label} · ${p.method} pocket ${p.pocket_id} · ${rankText(p)}`,colour:colour(p,i)});
+        if(st.landmark)legend.push({text:`${st.model.short_label} · ${st.landmark.label}`,colour:st.landmarkColours[st.landmark.kind]});
+        const motif=activeMotifs.get(i);
+        if(motif)legend.push({text:`${st.model.short_label} · ${motif.label} · ${motif.toolPositions.length} mapped`,colour:motif.colour});
+        if(pickedResidue?.index===i)legend.push({text:`${st.model.short_label} · ${pickedResidue.label}`,colour:'#00796e'});
+      });
+      viewer.render();
+      const blob=await window.pocketSnapshotPDF.make({uri:viewer.pngURI(),title:el('title').textContent,
+        subtitle:state.filter(st=>st.check.checked).map(st=>st.model.label).join(' / '),legend});
+      const url=URL.createObjectURL(blob),a=node('a');a.href=url;a.download='protein_pockets.pdf';
+      document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+    }catch(error){el('status').textContent='Could not export PDF: '+error.message+' You can still download PNG.';}
+    finally{el('pdf').disabled=false;}
+  };
   new ResizeObserver(()=>{viewer.resize();viewer.render();}).observe(el('viewer'));
   window.pocketViewer=viewer;
   apply(true);

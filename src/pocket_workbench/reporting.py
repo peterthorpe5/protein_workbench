@@ -213,11 +213,17 @@ def export_review(*, root: Path, output: Path) -> Path:
                 reference_label=result["reference"],
                 mobile_label=result["mobile"],
                 reference_metadata=model_viewer_records(
-                    root=root, model=reference, pockets=data["pockets"]
+                    root=root,
+                    model=reference,
+                    pockets=data["pockets"],
+                    sequences=data["sequences"],
                 )
                 | ({"initial_display": "none"} if not initial_pair else {}),
                 mobile_metadata=model_viewer_records(
-                    root=root, model=mobile, pockets=data["pockets"]
+                    root=root,
+                    model=mobile,
+                    pockets=data["pockets"],
+                    sequences=data["sequences"],
                 )
                 | ({"initial_display": "none"} if not initial_pair else {}),
                 match=initial_pair,

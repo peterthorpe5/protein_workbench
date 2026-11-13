@@ -23,6 +23,12 @@ existing resource; no new calculations or DuckDB rebuild are needed.
    **Download offline model pocket page** to share the interactive HTML for the
    selected model and evidence. The page works locally without an app install or
    network request. A browser with WebGL is needed for 3D.
+4. **Search for a motif and save the view.** Open **Amino acid search**, enter a
+   sequence such as `ESQDR`, and choose one match or all matches. The search has
+   its own colour and keeps the selected pocket visible. Click **Download PDF**
+   to save the current view and its legend. See the
+   [sequence and reference tools guide](SEQUENCE_REFERENCE_TOOLS.md) for
+   comparison searches and model downloads.
 
 ### Maddy's BRCA1 example
 

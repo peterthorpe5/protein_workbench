@@ -531,6 +531,8 @@ def import_project(
             model["source_accession"] = mapping_row.get(
                 "source_accession"
             ) or model.get("source_accession", "")
+            if species := (mapping_row.get("species") or "").strip():
+                model["species"] = species
             model["group_id"] = (
                 model["hog_id"]
                 or map_rows.get(identifier, {}).get("group_id")
@@ -544,6 +546,12 @@ def import_project(
             )
             source = structures.get(identifier)
             if source is None:
+                mapped = mapping_row.get("sequence_id", "")
+                if mapped and mapped in sequences:
+                    model.update(
+                        sequence_id=mapped,
+                        mapping_status="fasta_supplied_coordinates_missing",
+                    )
                 continue
             LOGGER.info("Importing %s", identifier)
             relative = f"models/{identifier}/prepared.pdb"

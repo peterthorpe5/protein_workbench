@@ -196,7 +196,10 @@ def structure_document(
     linked = not mobile_pdb and bool(
         payload["models"] and payload["models"][0].get("linked_axis")
     )
-    libraries = [viewer_asset(name="3Dmol-min.js")]
+    libraries = [
+        viewer_asset(name=name)
+        for name in ("3Dmol-min.js", "structure_features.js", "snapshot_pdf.js")
+    ]
     if linked:
         libraries.extend(
             viewer_asset(name=name)

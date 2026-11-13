@@ -1,4 +1,4 @@
-# Protein Pocket Workbench 1.5.0
+# Protein Pocket Workbench 1.6.0
 
 Browse predicted protein pockets, saved structural alignments, pocket-marked
 FASTA alignments and trees. The analysis runs in batch on HPC; colleagues can
@@ -10,19 +10,19 @@ predictor is needed for viewing.
 **Install this update on your viewing machine. Keep the existing 1.2.0 software
 and environment on Dundee while the quality rerun is running or being resumed.**
 Workflow fingerprints include software identity, so changing that installation
-can prevent an exact resume. Open existing native resources in 1.5.0 without
+can prevent an exact resume. Open existing native resources in 1.6.0 without
 rerunning pocket prediction, fitting, alignment or rebuilding DuckDB.
 
 Extract the software ZIP into Downloads, stop the old app with Ctrl-C, then:
 
 ```bash
-cd "$HOME/Downloads/protein_pocket_workbench_1.5.0"
+cd "$HOME/Downloads/protein_pocket_workbench_1.6.0"
 conda activate pocket_workbench
 python -m pip install --upgrade --editable .
 pocket-workbench --version
 ```
 
-The version should be `1.5.0`. Keep this source directory in place because the
+The version should be `1.6.0`. Keep this source directory in place because the
 installation is editable. If you do not already have the environment, replace
 the activation step above with these two commands:
 
@@ -59,7 +59,22 @@ HTML report or DuckDB file alone does not supply the structures needed for 3D.
 A review ZIP contains a nested `app_resource.zip`; extract that too for the app.
 The app starts in browsing mode, with analysis submission controls hidden.
 
-## New in 1.5.0: linked structure and pockets
+## New in 1.6.0: amino acid search and scene PDF
+
+In **Models & pockets**, search `ESQDR` in the intact dog BRCA1 model. Choose
+one occurrence or **All occurrences** and set its colour. The Nightingale
+track and the 3D overlay update together; the current pocket and BRCT window
+stay highlighted. **Compare structures** offers the same search for either
+model or both, along with any recorded domain windows. **Download PDF** saves
+the scene at its current orientation with its colour legend.
+
+The **Download a missing model or sequence** panel prepares public AlphaFold
+DB and NCBI files by explicit accession, separately from your saved analysis.
+**Species composition** in HOG/model groups and completed alignments shows
+counts and charts for representative sequence IDs. See
+[Sequence and reference tools](docs/SEQUENCE_REFERENCE_TOOLS.md).
+
+## Linked structure and pockets
 
 Open **Models & pockets**, choose one model and a predictor, then use the
 **Linked structure and pockets** panel. The Nightingale sequence tracks and
@@ -131,7 +146,7 @@ were created. To regenerate a finished offline review from saved evidence:
 ```bash
 pocket-workbench review \
   --resource /path/to/finished_resource \
-  --output /path/to/new_review_v1_5
+  --output /path/to/new_review_v1_6
 ```
 
 Choose a new output folder outside the resource. This exports existing evidence;
